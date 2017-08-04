@@ -1,4 +1,5 @@
 const moment = require('moment');
+const utils = require('lib/utils');
 
 module.exports = plugin;
 
@@ -52,82 +53,6 @@ function plugin (opts) {
     return false;
   }
 
-  /**
-   * Assign date data to metalsmith_.metadata
-   *
-   * @param {any} obj
-   * @param {any} path
-   * @param {any} value
-   */
-  function _assignPath (obj, path, value) {
-    const last = path.length - 1;
-    for (let i = 0; i < last; i++) {
-      const key = path[i];
-      if (typeof obj[key] === 'undefined') {
-        obj[key] = {};
-      }
-      obj = obj[key];
-    }
-    obj[path[last]] = value;
-  }
-
-  /**
-   * sort function for group dates
-   *
-   * @param {any} a
-   * @param {any} b
-   * @returns
-   */
-  function _orderByDate (a, b) {
-    return b.date - a.date;
-  }
-
-  /**
-   * sort function for group dates, inverted
-   *
-   * @param {any} a
-   * @param {any} b
-   * @returns
-   */
-  function _orderByDateReverse (a, b) {
-    return a.date - b.date;
-  }
-
-  /**
-   * checks individual values of post and returns whether there's a match to the match function
-   *
-   * @param {any} data
-   * @param {any} propertyValue
-   * @returns
-   */
-  function _contains (data, propertyValue) {
-    // for when we just want to check if a property exists
-    if (typeof propertyValue === 'boolean') {
-      if (propertyValue === true && typeof data !== 'undefined') {
-        return true;
-      } else if (propertyValue === true && typeof data === 'undefined') {
-        return false;
-      } else if (propertyValue === false && typeof data === 'undefined') {
-        return true;
-      } else if (propertyValue === false && typeof data !== 'undefined') {
-        return false;
-      }
-    }
-    // for checking strings and arrays against our search criteria values
-    if (typeof data !== 'undefined') {
-      if (typeof data === 'string' && makeSafe(data) === makeSafe(propertyValue)) {
-        return true;
-      }
-      if (Array.isArray(data)) {
-        data = data.map(tag => {
-          tag = makeSafe(String(tag).trim());
-          return tag;
-        });
-        return data.includes(makeSafe(propertyValue));
-      }
-    }
-  }
-
   // PLUGIN
   return function (files, metalsmith, done) {
     // empty group array to push results to
@@ -161,11 +86,11 @@ function plugin (opts) {
         let reverse = typeof opts.groups[groupIndex].reverse !== 'undefined' && opts.groups[groupIndex].reverse === false;
         if (expose) {
           for (let exposeVarName in groups[groupIndex]) {
-            groups[groupIndex][exposeVarName].files = reverse ? groups[groupIndex][exposeVarName].files.sort(_orderByDateReverse) : groups[groupIndex][exposeVarName].files.sort(_orderByDate);
+            groups[groupIndex][exposeVarName].files = reverse ? groups[groupIndex][exposeVarName].files.sort(utils.orderByDateReverse) : groups[groupIndex][exposeVarName].files.sort(utils.orderByDate);
           }
         } else {
           if (typeof groups[groupIndex].files !== 'undefined') { // don't overwrite exposed groups
-            groups[groupIndex].files = reverse ? groups[groupIndex].files.sort(_orderByDateReverse) : groups[groupIndex].files.sort(_orderByDate);
+            groups[groupIndex].files = reverse ? groups[groupIndex].files.sort(utils.orderByDateReverse) : groups[groupIndex].files.sort(utils.orderByDate);
           }
         }
       }
@@ -209,13 +134,13 @@ function plugin (opts) {
         // first one wrong will return false
         if (searchType === 'all') {
           match = true;
-          if (!_contains(data[propertyName], propertyValue)) {
+          if (!utils.contains(data[propertyName], propertyValue, makeSafe)) {
             match = false;
             break;
           }
         // first one correct will return true
         } else if (searchType === 'any') {
-          if (_contains(data[propertyName], propertyValue)) {
+          if (utils.contains(data[propertyName], propertyValue, makeSafe)) {
             match = true;
             break;
           }
@@ -406,7 +331,7 @@ function plugin (opts) {
             let dateItems = minigroup;
             let count = pageFiles.length;
             dateItems = dateItems.split('/');
-            _assignPath(metalsmith._metadata.site.dates, dateItems, {date: minigroup, count: count, files: pageFiles});
+            utils.assignPath(metalsmith._metadata.site.dates, dateItems, {date: minigroup, count: count, files: pageFiles});
           }
           // layout
           const dateLayout = opts.groups[groupIndex].date_page_layout.split('/');
