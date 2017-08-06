@@ -1,0 +1,117 @@
+{
+  "base_group": {
+    "group_name": "group name"
+  },
+  "posts_pages": {
+    "permalink_group": "posts",
+    "drafts": false,
+    "groups": [
+      {
+        "group_name": "posts",
+        "type": "post",
+        "path": "{date}/{num}/{title}",
+        "date_format": "YYYY/MM",
+        "date_page_layout": "index-year.ext/index-month.ext",
+        "num_format": "page/{num}",
+        "per_page": 10,
+        "add_prop": [{
+          "search": true
+        }]
+      },
+      {
+        "group_name": "index",
+        "type": "post",
+        "page_layout": "index.ext",
+        "path": "{num}",
+        "num_format": "page/{num}",
+        "per_page": 10
+      },
+      {
+        "group_name": "pages",
+        "type": "page",
+        "path": "{title}",
+        "override_permalink_group": true
+      }
+    ]
+  },
+  "complex": {
+    "permalink_group": "posts",
+    "drafts": false,
+    "groups": [
+      {
+        "group_name": "posts",
+        "type": "post",
+        "path": "{date}/{num}/{title}",
+        "date_format": "YYYY/MM",
+        "date_page_layout": "index-year.ext/index-month.ext",
+        "num_format": "page/{num}",
+        "per_page": 10,
+        "add_prop": [{
+          "search": true
+        }]
+      },
+      {
+        "group_name": "index",
+        "type": "post",
+        "page_layout": "index.ext",
+        "path": "{num}",
+        "num_format": "page/{num}",
+        "per_page": 10
+      },
+      {
+        "group_name": "tag",
+        "type": "post",
+        "expose": "tags",
+        "path": "tags/{expose}/{num}",
+        "num_format": "page/{num}",
+        "per_page": 10
+      },
+      {
+        "group_name": "pages",
+        "type": "page",
+        "path": "{title}",
+        "override_permalink_group": true
+      },
+      {
+        "group_name": "error",
+        "title": "404",
+        "path": "{title}",
+        "override_permalink_group": true,
+        "no_folder": true
+      },
+      {
+        "group_name": "portfolio",
+        "type": "post",
+        "tags": "thumb",
+        "thumb_url": true,
+        "path": "{group}",
+        "page_layout": "index-masonry-thumb.ext"
+      },
+      {
+        "group_name": "rss",
+        "type": "post",
+        "path": "{group}",
+        "change_extension": ".xml",
+        "page_layout": "rss",
+        "page_only": true
+      },
+      {
+        "group_name": "tag_rss",
+        "type": "post",
+        "expose": "tags",
+        "path": "tag/{expose}/rss",
+        "page_only": true,
+        "change_extension": ".xml",
+        "page_layout": "rss.ext"
+      },
+      {
+        "group_name": "sitemap",
+        "page_layout": "sitemap.ext",
+        "path": "{group}",
+        "no_folder": true,
+        "change_extension": ".xml",
+        "page_only": true
+      }
+    ]
+  }
+}
