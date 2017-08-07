@@ -353,3 +353,106 @@ t.test('preparePost', function (t) {
 
   t.end();
 });
+
+t.test('matchPost', function (t) {
+  const post = {
+    type: 'post',
+    collection: 'something',
+    title: 'My Post',
+    date: '2017-05-11',
+    draft: false,
+    tags: [ 'one', 'two', 'three' ]
+  };
+
+  t.test('returns true if no searchParams are passed', function (t) {
+    const post = {};
+
+    t.ok(posts.matchPost(post, null));
+    t.end();
+  });
+
+  t.test('searchParams is boolean', function (t) {
+    t.test('returns true if the searchParam is true and exists, regardless of its value', function (t) {
+      const searchParams = { draft: true };
+
+      t.ok(posts.matchPost(post, 'any', searchParams));
+      t.end();
+    });
+
+    t.test('returns false if the searchParam is false and exists, regardless of its value', function (t) {
+      const searchParams = { draft: false };
+
+      t.notOk(posts.matchPost(post, 'any', searchParams));
+      t.end();
+    });
+
+    t.test('returns false if the searchParam is boolean and does not exist', function (t) {
+      const searchParams = { something: true };
+
+      t.notOk(posts.matchPost(post, 'any', searchParams));
+      t.end();
+    });
+
+    t.end();
+  });
+
+  t.test('searchParams references to a parameter array', function (t) {
+    t.test('returns true if the value is contained in the array', function (t) {
+      const searchParams = { tags: 'two' };
+
+      t.ok(posts.matchPost(post, 'all', searchParams));
+      t.end();
+    });
+
+    t.test('returns false if the value is not in the array', function (t) {
+      const searchParams = { tags: 'four' };
+
+      t.notOk(posts.matchPost(post, 'all', searchParams));
+      t.end();
+    });
+
+    t.end();
+  });
+
+  t.test('all searchType', function (t) {
+    const allSearchType = 'all';
+
+    t.test('returns true if all search params match', function (t) {
+      const searchParams = { type: 'post', collection: 'something' };
+
+      t.ok(posts.matchPost(post, allSearchType, searchParams));
+      t.end();
+    });
+
+    t.test('returns false if one search params does not match', function (t) {
+      const searchParams = { type: 'post', collection: 'else' };
+
+      t.notOk(posts.matchPost(post, allSearchType, searchParams));
+      t.end();
+    });
+
+    t.end();
+  });
+
+  t.test('any searchType', function (t) {
+    const anySearchType = 'any';
+
+    t.test('returns true if any search params match', function (t) {
+      const searchParams = { type: 'article', collection: 'something' };
+
+      t.ok(posts.matchPost(post, anySearchType, searchParams));
+      t.end();
+    });
+
+    t.test('returns false if no search params match', function (t) {
+      const searchParams = { type: 'article', collection: 'else' };
+
+      t.notOk(posts.matchPost(post, anySearchType, searchParams));
+      t.end();
+    });
+
+    t.end();
+  });
+
+  t.end();
+});

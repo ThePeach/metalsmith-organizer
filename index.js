@@ -60,7 +60,7 @@ function plugin (opts) {
           // see if post specifies search_type
           let searchType = typeof opts.groups[groupIndex].search_type !== 'undefined' ? opts.groups[groupIndex].search_type : opts.search_type;
           // check if post matches criteria then send the post to sort if it does
-          if (matchPost(post, searchType, opts.groups[groupIndex].search)) {
+          if (posts.matchPost(post, searchType, opts.groups[groupIndex].search)) {
             prepareAndPushPost(post, fileIndex, groups[groupIndex], opts.groups[groupIndex]);
           }
         }
@@ -98,42 +98,6 @@ function plugin (opts) {
         postParser(files, groupIndex, groupName, exposeValue, expose, pathReplace, layout, extension);
       }
     })();
-
-    /**
-     * returns whether a post matches our criteria or not
-     *
-     * @param {Object} data the data associated to a parsed file
-     * @param {String} searchType can either be `all` or `any`
-     * @param {Array} searchParams the specified params used for matching
-     * @returns {Boolean}
-     */
-    function matchPost (data, searchType, searchParams) {
-      let match = false;
-      // we include all posts by default if no search has been defined in the options
-      if (searchParams.length === 0) {
-        return true;
-      }
-      for (let propIndex = 0; propIndex < searchParams.length; propIndex++) {
-        let propertyName = Object.keys(searchParams[propIndex]);
-        let propertyValue = searchParams[propIndex][propertyName];
-
-        // first one wrong will return false
-        if (searchType === 'all') {
-          match = true;
-          if (!utils.contains(data[propertyName], propertyValue, makeSafe)) {
-            match = false;
-            break;
-          }
-        // first one correct will return true
-        } else if (searchType === 'any') {
-          if (utils.contains(data[propertyName], propertyValue, makeSafe)) {
-            match = true;
-            break;
-          }
-        }
-      }
-      return match;
-    }
 
     /**
      * Prepares the post and pushes it into the right group.
