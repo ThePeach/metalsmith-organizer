@@ -156,8 +156,8 @@ function plugin (opts) {
         group[expose].files = group[expose].files || [];
         group[expose].files.push(post);
       } else {
-        if (typeof opts.groups.date_format !== 'undefined') {
-          let dateItems = opts.groups.date_format;
+        if (typeof optsGroup.date_format !== 'undefined') {
+          let dateItems = optsGroup.date_format;
           dateItems = dateItems.split('/');
           for (let i = 1; i <= dateItems.length; i++) {
             let format = dateItems.slice(0, i).join('/');
