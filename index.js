@@ -1,5 +1,6 @@
 const moment = require('moment');
 const utils = require('lib/utils');
+const posts = require('lib/posts');
 
 module.exports = plugin;
 
@@ -37,21 +38,6 @@ function plugin (opts) {
   }
   // let user override
   const makeSafe = (typeof opts.make_safe === 'function') ? opts.make_safe : _defaultMakeSafe;
-
-  /**
-   * Returns the groups index based on group_name
-   *
-   * @param {String} group_name the name of the group
-   * @returns {Number}
-   */
-  function _getGroupIndex (group_name) { // eslint-disable-line camelcase
-    for (let groupIndex = 0; groupIndex < opts.groups.length; groupIndex++) {
-      if (opts.groups[groupIndex].group_name === group_name) { // eslint-disable-line camelcase
-        return groupIndex;
-      }
-    }
-    return false;
-  }
 
   // PLUGIN
   return function (files, metalsmith, done) {
@@ -175,7 +161,7 @@ function plugin (opts) {
       const expose = optsGroup.expose;
       const exposeValue = optsGroup[expose];
 
-      preparePost(post, optsGroup, fileName);
+      posts.preparePost(post, optsGroup, opts, fileName, makeSafe);
 
       if (expose) {
         if (typeof exposeValue === 'undefined') { // e.g. expose:tags but no specific tag defined, it'll expose all
@@ -220,66 +206,6 @@ function plugin (opts) {
         }
         group.files = group.files || [];
         group.files.push(post);
-      }
-    }
-
-    /**
-     * Prepare the post with all the additional stuff we need
-     *
-     * @param {Object} post
-     * @param {Object} optsGroup
-     * @param {String} fileName
-     */
-    function preparePost (post, optsGroup, fileName) {
-      if (typeof post.title === 'undefined') {
-        throw new Error('File ' + fileName + ' missing title. If the file has a title, make sure the frontmatter is formatted correctly.');
-      }
-
-      const groupName = optsGroup.group_name;
-      post.original_contents = new Buffer(post.contents.toString());
-      // sort out the path for the post
-      let pathReplace = {};
-      if (typeof post.slug !== 'undefined') {
-        pathReplace.title = post.slug; // do not makeSafe the slug on purpose
-      } else {
-        pathReplace.title = makeSafe(post.title);
-      }
-      // normal groups
-      // because the object is just being referenced, it might have already been set
-      if (typeof post.permalink === 'undefined') {
-        const permalinkGroupIndex = _getGroupIndex(opts.permalink_group);
-        pathReplace.group = groupName;
-        if (typeof opts.groups[ permalinkGroupIndex ].date_format !== 'undefined') {
-          pathReplace.date = moment(post.date).format(opts.groups[ permalinkGroupIndex ].date_format);
-        }
-        post.permalink = '/' + opts.groups[permalinkGroupIndex].path
-          .replace(/\/{num}/g, '')
-          .replace(/{(.*?)}/g, function (matchPost, matchedGroup) {
-            return pathReplace[matchedGroup];
-          });
-      }
-      // groups that override the permalink
-      if (typeof optsGroup.override_permalink_group !== 'undefined') {
-        let path;
-        pathReplace.group = groupName;
-        if (typeof optsGroup.override_permalink_group.date_format !== 'undefined') {
-          pathReplace.date = moment(post.date).format(optsGroup.override_permalink_group.date_format);
-        }
-        if (typeof optsGroup.path === 'undefined') {
-          path = '{group}/{title}';
-        } else {
-          path = optsGroup.path;
-        }
-        post.permalink = '/' + path.replace(/\/{num}/g, '').replace(/{(.*?)}/g, function (matchPost, matchedGroup) {
-          return pathReplace[matchedGroup];
-        });
-      }
-      // add any properties specified
-      if (typeof optsGroup.add_prop !== 'undefined') {
-        for (let set in optsGroup.add_prop) {
-          const prop = Object.keys(optsGroup.add_prop[set])[0];
-          post[prop] = optsGroup.add_prop[set][prop];
-        }
       }
     }
 
