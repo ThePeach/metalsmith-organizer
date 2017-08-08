@@ -1,12 +1,12 @@
 const t = require('tap');
 const groups = require('../lib/groups');
 
-t.test('fetch()', function (t) {
+t.test('fetchGroup()', function (t) {
   const groupName = 'something';
   let group = null;
 
   t.test('if a group does not exist it will be created', function (t) {
-    group = groups.fetch(groupName);
+    group = groups.fetchGroup(groupName);
 
     t.notEquals(typeof group, undefined);
     t.equals(group.name, groupName);
@@ -19,7 +19,7 @@ t.test('fetch()', function (t) {
 
     group.variable = expectedValue;
     // re-fetch the group
-    group = groups.fetch(groupName);
+    group = groups.fetchGroup(groupName);
 
     t.equals(group.name, groupName);
     t.equals(group.variable, expectedValue);
@@ -30,15 +30,15 @@ t.test('fetch()', function (t) {
   t.end();
 });
 
-t.test('push()', function (t) {
+t.test('pushGroup()', function (t) {
   const post = {
     title: 'My Post Title'
   };
   const groupName = 'else';
-  const group = groups.fetch(groupName);
+  const group = groups.fetchGroup(groupName);
 
   t.test('the post data will be added to the list of files of the group', function (t) {
-    groups.push(post, group);
+    groups.pushGroup(post, group);
 
     t.notEquals(typeof group.files, undefined);
     t.equals(group.files.length, 1);
@@ -49,7 +49,7 @@ t.test('push()', function (t) {
 
   t.test('the post data will be added to an exposed variable if passed', function (t) {
     const varName = 'tags';
-    groups.push(post, group, varName);
+    groups.pushGroup(post, group, varName);
 
     t.notEquals(typeof group[varName], undefined);
     t.equals(group[varName].files.length, 1);
@@ -67,14 +67,14 @@ t.test('reset()', function (t) {
     title: 'something'
   };
   groups.reset();
-  let group = groups.fetch(groupName);
+  let group = groups.fetchGroup(groupName);
   t.equals(group.name, groupName);
 
-  groups.push(post, group);
+  groups.pushGroup(post, group);
   t.equals(group.files.length, 1);
 
   groups.reset();
-  group = groups.fetch(groupName);
+  group = groups.fetchGroup(groupName);
   t.equals(typeof group.files, 'undefined');
 
   t.end();
@@ -102,10 +102,10 @@ t.test('sortAll()', function (t) {
 
   t.test('posts without exposed variables will be sorted by date', function (t) {
     groups.reset();
-    const group = groups.fetch(groupName);
+    const group = groups.fetchGroup(groupName);
 
-    groups.push(post2, group);
-    groups.push(post1, group);
+    groups.pushGroup(post2, group);
+    groups.pushGroup(post1, group);
     groups.sortAll(opts);
 
     const date1 = new Date(group.files[0].date);
@@ -120,10 +120,10 @@ t.test('sortAll()', function (t) {
     // add reverse option
     opts.groups[0].reverse = true;
 
-    const group = groups.fetch(groupName);
+    const group = groups.fetchGroup(groupName);
 
-    groups.push(post2, group);
-    groups.push(post1, group);
+    groups.pushGroup(post2, group);
+    groups.pushGroup(post1, group);
     groups.sortAll(opts);
 
     const date1 = new Date(group.files[0].date);
@@ -140,10 +140,10 @@ t.test('sortAll()', function (t) {
     opts.groups[0].expose = exposedVar;
     opts.groups[0].reverse = false;
 
-    const group = groups.fetch(groupName);
+    const group = groups.fetchGroup(groupName);
 
-    groups.push(post2, group, exposedVar);
-    groups.push(post1, group, exposedVar);
+    groups.pushGroup(post2, group, exposedVar);
+    groups.pushGroup(post1, group, exposedVar);
     groups.sortAll(opts);
 
     let date1 = new Date(group[exposedVar].files[0].date);
@@ -168,11 +168,11 @@ t.test('sortAll()', function (t) {
     opts.groups[0].expose = exposedVar;
     opts.groups[0].reverse = false;
 
-    const group = groups.fetch(groupName);
+    const group = groups.fetchGroup(groupName);
 
     post1.tags.forEach(function (variable) {
-      groups.push(post2, group, variable);
-      groups.push(post1, group, variable);
+      groups.pushGroup(post2, group, variable);
+      groups.pushGroup(post1, group, variable);
     });
     groups.sortAll(opts);
 

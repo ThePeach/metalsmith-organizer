@@ -2,6 +2,7 @@ const moment = require('moment');
 const utils = require('lib/utils');
 const posts = require('lib/posts');
 const groups = require('lib/groups');
+const optsUtils = require('lib/options');
 
 module.exports = plugin;
 
@@ -58,7 +59,7 @@ function plugin (opts) {
           let searchType = typeof opts.groups[groupIndex].search_type !== 'undefined' ? opts.groups[groupIndex].search_type : opts.search_type;
           // check if post matches criteria then send the post to sort if it does
           if (posts.matchPost(post, searchType, opts.groups[groupIndex].search)) {
-            let group = groups.fetch(opts.groups[groupIndex].group_name);
+            let group = groups.fetchGroup(opts.groups[groupIndex].group_name);
             prepareAndPushPost(post, fileIndex, group, opts.groups[groupIndex]);
           }
         }
@@ -73,17 +74,10 @@ function plugin (opts) {
       }
 
       // with our new groups array go through them and push our final files to our files list
-      // TODO move into groups lib
-      for (let groupIndex in groups) {
-        let expose = opts.groups[groupIndex].expose;
-        let exposeValue = opts.groups[groupIndex][expose];
-        let pathReplace = {group: opts.groups[groupIndex].group_name};
-        let groupName = opts.groups[groupIndex].groupName;
-        let layout = opts.groups[groupIndex].page_layout || 'index';
-        let extension = typeof opts.groups[groupIndex].change_extension !== 'undefined' ? opts.groups[groupIndex].change_extension : '.html';
-        pageParser(files, groupIndex, groupName, exposeValue, expose, pathReplace, layout, extension);
-        postParser(files, groupIndex, groupName, exposeValue, expose, pathReplace, layout, extension);
-      }
+      opts.groups.array.forEach(function (group) {
+        pageParser(files, group.name);
+        postParser(files, group.name);
+      }, this);
     })();
 
     /**
@@ -119,15 +113,15 @@ function plugin (opts) {
         if (typeof exposeValue === 'undefined') {
           // no need to get list of tags, for each tag in post it's "pushed" to its tags
           for (let property in post[expose]) {
-            groups.push(post, group, post[expose][property]);
+            groups.pushGroup(post, group, post[expose][property]);
           }
         } else {
           // e.g. expose: tags, tags: post
-          groups.push(post, group, exposeValue);
+          groups.pushGroup(post, group, exposeValue);
         }
       } else {
         // don't expose anything
-        groups.push(post, group);
+        groups.pushGroup(post, group);
       }
     }
 
@@ -135,36 +129,39 @@ function plugin (opts) {
      * for pages
      *
      * @param {any} files
-     * @param {any} groupIndex
      * @param {any} groupName
-     * @param {any} exposeValue
-     * @param {any} expose
-     * @param {any} pathReplace
-     * @param {any} layout
-     * @param {any} extension
      * @returns
      */
-    function pageParser (files, groupIndex, groupName, exposeValue, expose, pathReplace, layout, extension) {
+    function pageParser (files, groupName) {
+      const optsGroup = optsUtils.fetchOptsGroup(groupName, opts);
+
+      const expose = optsGroup.expose;
+      const exposeValue = optsGroup[expose];
+      const pathReplace = {group: optsGroup.group_name};
+      const extension = typeof optsGroup.change_extension !== 'undefined' ? optsGroup.change_extension : '.html';
+      let layout = optsGroup.page_layout || 'index';
+
       // return when path does not allow page to be made or when we're in the permalink group
-      if (opts.groups[groupIndex].path === '{title}' ||
-        (groupName === opts.permalink_group && opts.groups[groupIndex].override_permalink_group === false)) {
+      if (optsGroup.path === '{title}' ||
+        (groupName === opts.permalink_group && optsGroup.override_permalink_group === false)) {
         return;
       }
-      // set largegroup to more clearly understand what's being iterated over
-      let largegroup = groups[groupIndex];
-      if (typeof largegroup.dates !== 'undefined') {
-        largegroup = largegroup.dates;
+
+      // set group to more clearly understand what's being iterated over
+      let group = groups.fetchGroup(groupName);
+      if (typeof group.dates !== 'undefined') {
+        group = group.dates;
       }
       // FIXME this should be refactored in smaller chunks, hard to digest all at once
-      for (let minigroup in largegroup) {
+      for (let minigroup in group) {
         let pageFiles;
         // determines where exactly the files are
-        if (typeof largegroup[exposeValue] !== 'undefined') { // exposed value
-          pageFiles = largegroup[exposeValue].files;
-        } else if (typeof largegroup[minigroup] !== 'undefined' && minigroup !== 'files') { // dates
-          pageFiles = largegroup[minigroup].files;
+        if (typeof group[exposeValue] !== 'undefined') { // exposed value
+          pageFiles = group[exposeValue].files;
+        } else if (typeof group[minigroup] !== 'undefined' && minigroup !== 'files') { // dates
+          pageFiles = group[minigroup].files;
         } else { // normal pages
-          pageFiles = largegroup.files;
+          pageFiles = group.files;
         }
         // push any exposed information to metalsmith._metadata and handle path for dates layout
         if (typeof expose !== 'undefined' && typeof exposeValue === 'undefined') { // exposed values
@@ -174,7 +171,7 @@ function plugin (opts) {
           metalsmith._metadata.site[expose][minigroup] = {nicename: nicename, count: count};
         } else if (typeof expose === 'undefined' && minigroup !== 'files') { // dates
           // metadata
-          if (moment(minigroup, opts.groups[groupIndex].date_format, true).isValid()) {
+          if (moment(minigroup, optsGroup.date_format, true).isValid()) {
             metalsmith._metadata.site.dates = metalsmith._metadata.site.dates || {};
             let dateItems = minigroup;
             let count = pageFiles.length;
@@ -182,13 +179,13 @@ function plugin (opts) {
             utils.assignPath(metalsmith._metadata.site.dates, dateItems, {date: minigroup, count: count, files: pageFiles});
           }
           // layout
-          const dateLayout = opts.groups[groupIndex].date_page_layout.split('/');
+          const dateLayout = optsGroup.date_page_layout.split('/');
           const currentLayout = minigroup.split('/').length - 1;
           layout = dateLayout[currentLayout];
         }
         // now that we have our files and variables split files into pages
         let pages = [];
-        let perPage = opts.groups[groupIndex].per_page || pageFiles.length; // don't use infinity
+        let perPage = optsGroup.per_page || pageFiles.length; // don't use infinity
         let totalPages = Math.ceil(pageFiles.length / perPage);
         if (totalPages === 0) {
           totalPages = 1;
@@ -202,7 +199,7 @@ function plugin (opts) {
           } else {
             delete pathReplace.num;
           }
-          if (typeof opts.groups[groupIndex].date_format !== 'undefined') {
+          if (typeof optsGroup.date_format !== 'undefined') {
             pathReplace.date = minigroup;
           }
           if (expose || exposeValue) {
@@ -210,28 +207,35 @@ function plugin (opts) {
             pathReplace.expose = makeSafe(pathReplace.expose);
           }
           // create path by replacing variables
-          let path = opts.groups[groupIndex].path.replace(/{title}/g, '').replace(/{(.*?)}/g, function (matchPost, matchedGroup) {
-            if (typeof pathReplace[matchedGroup] !== 'undefined') {
-              if (matchedGroup === 'num' && typeof opts.groups[groupIndex].num_format !== 'undefined') {
-                return opts.groups[groupIndex].num_format.replace(/{(.*?)}/g, function (matchPost, matchedGroup) { return pathReplace[matchedGroup]; });
+          let path = optsGroup.path
+            .replace(/{title}/g, '')
+            .replace(/{(.*?)}/g, function (matchPost, matchedGroup) {
+              if (typeof pathReplace[matchedGroup] === 'undefined') {
+                return '';
+              } else {
+                if (matchedGroup === 'num' && typeof optsGroup.num_format !== 'undefined') {
+                  return optsGroup.num_format
+                    .replace(/{(.*?)}/g, function (matchPost, matchedGroup) {
+                      return pathReplace[matchedGroup];
+                    });
+                }
+                return pathReplace[matchedGroup];
               }
-              return pathReplace[matchedGroup];
-            } else {
-              return '';
-            }
-          }).replace(/(\/)+/g, '/').replace(/.$/m, match => {
-            if (match !== '/') {
-              return match + '/';
-            } else {
-              return match;
-            }
-          });
+            })
+            .replace(/(\/)+/g, '/')
+            .replace(/.$/m, match => {
+              if (match !== '/') {
+                return match + '/';
+              } else {
+                return match;
+              }
+            });
           // allows user to change filename
           let filename;
-          if (typeof opts.groups[groupIndex].page_only !== 'undefined' &&
-            opts.groups[groupIndex].page_only === true &&
-            typeof opts.groups[groupIndex].no_folder !== 'undefined' &&
-            opts.groups[groupIndex].no_folder === true) {
+          if (typeof optsGroup.page_only !== 'undefined' &&
+            optsGroup.page_only === true &&
+            typeof optsGroup.no_folder !== 'undefined' &&
+            optsGroup.no_folder === true) {
             filename = '';
             path = path.slice(0, path.length - 1);
           } else {
@@ -264,8 +268,8 @@ function plugin (opts) {
             page.exposed_value = minigroup;
           }
           // adds a page description if it exists
-          if (typeof opts.groups[groupIndex].page_description !== 'undefined') {
-            page.page_description = opts.groups[groupIndex].page_description;
+          if (typeof optsGroup.page_description !== 'undefined') {
+            page.page_description = optsGroup.page_description;
           }
           // append previous page to pagination
           if (totalPages !== 1 && i !== 0) {
@@ -298,31 +302,36 @@ function plugin (opts) {
      * @param {any} extension
      * @returns
      */
-    function postParser (files, groupIndex, groupName, exposeValue, expose, pathReplace, layout, extension) {
+    function postParser (files, groupName) {
+      const optsGroup = optsUtils.fetchOptsGroup(groupName, opts);
+      const group = groups.fetchGroup(groupName);
+
+      const extension = typeof optsGroup.change_extension !== 'undefined' ? optsGroup.change_extension : '.html';
+
       // ignore page_only group
-      if (typeof opts.groups[groupIndex].page_only !== 'undefined' && opts.groups[groupIndex].page_only === true) {
+      if (typeof optsGroup.page_only !== 'undefined' && optsGroup.page_only === true) {
         return;
       }
       // make sure we're in a permalink group or the group allows overriding
-      if (groupName === opts.permalink_group || opts.groups[groupIndex].override_permalink_group === true) {
-        for (let post in groups[groupIndex].files) {
-          let postpage = Object.assign({}, groups[groupIndex].files[post]); // reference to groupName was being overwritten
+      if (groupName === opts.permalink_group || optsGroup.override_permalink_group === true) {
+        for (let post in group.files) {
+          let postpage = Object.assign({}, group.files[post]); // reference to groupName was being overwritten
           // change path if we want no fodler
-          if (typeof opts.groups[groupIndex].no_folder !== 'undefined' && opts.groups[groupIndex].no_folder === true) {
+          if (typeof optsGroup.no_folder !== 'undefined' && optsGroup.no_folder === true) {
             postpage.path = postpage.permalink.replace(/\/||\\/, '') + extension;
           } else {
             postpage.path = postpage.permalink.replace(/\/||\\/, '') + '/index' + extension;
           }
           // handle pagination of posts
           let next = parseInt(post, 10) + 1;
-          if (typeof groups[groupIndex].files[next] !== 'undefined') {
+          if (typeof group.files[next] !== 'undefined') {
             postpage.pagination = postpage.pagination || {};
-            postpage.pagination.next = groups[groupIndex].files[next];
+            postpage.pagination.next = group.files[next];
           }
           let prev = parseInt(post, 10) - 1;
-          if (prev >= 0 && typeof groups[groupIndex].files[prev] !== 'undefined') {
+          if (prev >= 0 && typeof group.files[prev] !== 'undefined') {
             postpage.pagination = postpage.pagination || {};
-            postpage.pagination.prev = groups[groupIndex].files[prev];
+            postpage.pagination.prev = group.files[prev];
           }
           postpage.group = groupName;
           returnPage(postpage, files);
