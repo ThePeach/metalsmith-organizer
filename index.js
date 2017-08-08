@@ -65,24 +65,7 @@ function plugin (opts) {
       }
 
       // once we have out new `groups` object sort it by date if necessary
-      for (let groupIndex in groups) {
-        let expose = opts.groups[groupIndex].expose;
-        let reverse = typeof opts.groups[groupIndex].reverse !== 'undefined' && opts.groups[groupIndex].reverse === false;
-        if (expose) {
-          for (let exposeVarName in groups[groupIndex]) {
-            groups[groupIndex][exposeVarName].files = reverse
-              ? groups[groupIndex][exposeVarName].files.sort(utils.orderByDateReverse)
-              : groups[groupIndex][exposeVarName].files.sort(utils.orderByDate);
-          }
-        } else {
-          if (typeof groups[groupIndex].files !== 'undefined') {
-            // don't overwrite exposed groups
-            groups[groupIndex].files = reverse
-              ? groups[groupIndex].files.sort(utils.orderByDateReverse)
-              : groups[groupIndex].files.sort(utils.orderByDate);
-          }
-        }
-      }
+      groups.sortAll(opts);
 
       // delete original file list
       for (let file in files) {
@@ -90,6 +73,7 @@ function plugin (opts) {
       }
 
       // with our new groups array go through them and push our final files to our files list
+      // TODO move into groups lib
       for (let groupIndex in groups) {
         let expose = opts.groups[groupIndex].expose;
         let exposeValue = opts.groups[groupIndex][expose];

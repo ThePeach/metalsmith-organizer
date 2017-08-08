@@ -83,11 +83,13 @@ t.test('reset()', function (t) {
 t.test('sortAll()', function (t) {
   const post1 = {
     title: 'My Post Title',
-    date: '2017-03-02'
+    date: '2017-03-02',
+    tags: [ 't1', 't2' ]
   };
   const post2 = {
     title: 'Another Later Post',
-    date: '2017-09-11'
+    date: '2017-09-11',
+    tags: [ 't1', 't2' ]
   };
   const groupName = 'posts';
   const opts = {
@@ -132,8 +134,9 @@ t.test('sortAll()', function (t) {
   });
 
   t.test('if post exposes a variable, files in that subgroup should be sorted accordingly', function (t) {
+    groups.reset();
     // add exposes option
-    const exposedVar = 'tags';
+    const exposedVar = 'var';
     opts.groups[0].expose = exposedVar;
     opts.groups[0].reverse = false;
 
@@ -159,23 +162,23 @@ t.test('sortAll()', function (t) {
   });
 
   t.test('if post exposes variables, files in those subgroups should be sorted accordingly', function (t) {
+    groups.reset();
     // add exposes option
     const exposedVar = 'tags';
     opts.groups[0].expose = exposedVar;
-    opts.groups[0][exposedVar] = [ 't1', 't2' ];
     opts.groups[0].reverse = false;
 
     const group = groups.fetch(groupName);
 
-    opts.groups[0][exposedVar].forEach(function (variable) {
+    post1.tags.forEach(function (variable) {
       groups.push(post2, group, variable);
       groups.push(post1, group, variable);
     });
     groups.sortAll(opts);
 
-    opts.groups[0][exposedVar].forEach(function (variable) {
-      let date1 = new Date(group[exposedVar][variable].files[0].date);
-      let date2 = new Date(group[exposedVar][variable].files[1].date);
+    post1.tags.forEach(function (variable) {
+      let date1 = new Date(group[variable].files[0].date);
+      let date2 = new Date(group[variable].files[1].date);
 
       t.ok(date1.getTime() > date2.getTime());
     });
