@@ -60,3 +60,128 @@ t.test('push()', function (t) {
 
   t.end();
 });
+
+t.test('reset()', function (t) {
+  const groupName = 'test';
+  const post = {
+    title: 'something'
+  };
+  groups.reset();
+  let group = groups.fetch(groupName);
+  t.equals(group.name, groupName);
+
+  groups.push(post, group);
+  t.equals(group.files.length, 1);
+
+  groups.reset();
+  group = groups.fetch(groupName);
+  t.equals(typeof group.files, 'undefined');
+
+  t.end();
+});
+
+t.test('sortAll()', function (t) {
+  const post1 = {
+    title: 'My Post Title',
+    date: '2017-03-02'
+  };
+  const post2 = {
+    title: 'Another Later Post',
+    date: '2017-09-11'
+  };
+  const groupName = 'posts';
+  const opts = {
+    groups: [
+      {
+        group_name: groupName
+      }
+    ]
+  };
+
+  t.test('posts without exposed variables will be sorted by date', function (t) {
+    groups.reset();
+    const group = groups.fetch(groupName);
+
+    groups.push(post2, group);
+    groups.push(post1, group);
+    groups.sortAll(opts);
+
+    const date1 = new Date(group.files[0].date);
+    const date2 = new Date(group.files[1].date);
+    t.ok(date1.getTime() > date2.getTime());
+
+    t.end();
+  });
+
+  t.test('if reverse is specified, posts without exposed variables will be sorted by date descending', function (t) {
+    groups.reset();
+    // add reverse option
+    opts.groups[0].reverse = true;
+
+    const group = groups.fetch(groupName);
+
+    groups.push(post2, group);
+    groups.push(post1, group);
+    groups.sortAll(opts);
+
+    const date1 = new Date(group.files[0].date);
+    const date2 = new Date(group.files[1].date);
+    t.ok(date1.getTime() < date2.getTime());
+
+    t.end();
+  });
+
+  t.test('if post exposes a variable, files in that subgroup should be sorted accordingly', function (t) {
+    // add exposes option
+    const exposedVar = 'tags';
+    opts.groups[0].expose = exposedVar;
+    opts.groups[0].reverse = false;
+
+    const group = groups.fetch(groupName);
+
+    groups.push(post2, group, exposedVar);
+    groups.push(post1, group, exposedVar);
+    groups.sortAll(opts);
+
+    let date1 = new Date(group[exposedVar].files[0].date);
+    let date2 = new Date(group[exposedVar].files[1].date);
+
+    t.ok(date1.getTime() > date2.getTime());
+
+    opts.groups[0].reverse = true;
+    groups.sortAll(opts);
+
+    date1 = new Date(group[exposedVar].files[0].date);
+    date2 = new Date(group[exposedVar].files[1].date);
+    t.ok(date1.getTime() < date2.getTime());
+
+    t.end();
+  });
+
+  t.test('if post exposes variables, files in those subgroups should be sorted accordingly', function (t) {
+    // add exposes option
+    const exposedVar = 'tags';
+    opts.groups[0].expose = exposedVar;
+    opts.groups[0][exposedVar] = [ 't1', 't2' ];
+    opts.groups[0].reverse = false;
+
+    const group = groups.fetch(groupName);
+
+    opts.groups[0][exposedVar].forEach(function (variable) {
+      groups.push(post2, group, variable);
+      groups.push(post1, group, variable);
+    });
+    groups.sortAll(opts);
+
+    opts.groups[0][exposedVar].forEach(function (variable) {
+      let date1 = new Date(group[exposedVar][variable].files[0].date);
+      let date2 = new Date(group[exposedVar][variable].files[1].date);
+
+      t.ok(date1.getTime() > date2.getTime());
+    });
+
+    t.end();
+  });
+
+  t.end();
+});

@@ -1,6 +1,7 @@
 const moment = require('moment');
 const utils = require('lib/utils');
 const posts = require('lib/posts');
+const groups = require('lib/groups');
 
 module.exports = plugin;
 
@@ -42,16 +43,12 @@ function plugin (opts) {
   // PLUGIN
   return function (files, metalsmith, done) {
     // empty group array to push results to
-    const groups = [];
 
     (function init () {
-      // groupIndex being currently parsed, so functions can actually have some context
-      let groupIndex = null;
-
       // parse all files passed to the plugin, filter and sort them
       for (let fileIndex in files) {
         let post = files[fileIndex];
-        for (groupIndex in opts.groups) {
+        for (let groupIndex in opts.groups) {
           // if draft check
           if (opts.drafts === false &&
             (post.draft === true || post.draft === 'true' || post.published === false || post.published === 'false' || post.status === 'draft')) {
@@ -61,22 +58,28 @@ function plugin (opts) {
           let searchType = typeof opts.groups[groupIndex].search_type !== 'undefined' ? opts.groups[groupIndex].search_type : opts.search_type;
           // check if post matches criteria then send the post to sort if it does
           if (posts.matchPost(post, searchType, opts.groups[groupIndex].search)) {
-            prepareAndPushPost(post, fileIndex, groups[groupIndex], opts.groups[groupIndex]);
+            let group = groups.fetch(opts.groups[groupIndex].group_name);
+            prepareAndPushPost(post, fileIndex, group, opts.groups[groupIndex]);
           }
         }
       }
 
       // once we have out new `groups` object sort it by date if necessary
-      for (groupIndex in groups) {
+      for (let groupIndex in groups) {
         let expose = opts.groups[groupIndex].expose;
         let reverse = typeof opts.groups[groupIndex].reverse !== 'undefined' && opts.groups[groupIndex].reverse === false;
         if (expose) {
           for (let exposeVarName in groups[groupIndex]) {
-            groups[groupIndex][exposeVarName].files = reverse ? groups[groupIndex][exposeVarName].files.sort(utils.orderByDateReverse) : groups[groupIndex][exposeVarName].files.sort(utils.orderByDate);
+            groups[groupIndex][exposeVarName].files = reverse
+              ? groups[groupIndex][exposeVarName].files.sort(utils.orderByDateReverse)
+              : groups[groupIndex][exposeVarName].files.sort(utils.orderByDate);
           }
         } else {
-          if (typeof groups[groupIndex].files !== 'undefined') { // don't overwrite exposed groups
-            groups[groupIndex].files = reverse ? groups[groupIndex].files.sort(utils.orderByDateReverse) : groups[groupIndex].files.sort(utils.orderByDate);
+          if (typeof groups[groupIndex].files !== 'undefined') {
+            // don't overwrite exposed groups
+            groups[groupIndex].files = reverse
+              ? groups[groupIndex].files.sort(utils.orderByDateReverse)
+              : groups[groupIndex].files.sort(utils.orderByDate);
           }
         }
       }
@@ -128,48 +131,19 @@ function plugin (opts) {
       posts.preparePost(post, optsGroup, opts, fileName, makeSafe);
 
       if (expose) {
-        if (typeof exposeValue === 'undefined') { // e.g. expose:tags but no specific tag defined, it'll expose all
-          for (let property in post[expose]) { // no need to get list of tags, for each tag in post it's "pushed" to its tags
-            pushToGroup(post, group, optsGroup, post[expose][property]);
+        // e.g. expose:tags but no specific tag defined, it'll expose all
+        if (typeof exposeValue === 'undefined') {
+          // no need to get list of tags, for each tag in post it's "pushed" to its tags
+          for (let property in post[expose]) {
+            groups.push(post, group, post[expose][property]);
           }
         } else {
-          pushToGroup(post, group, optsGroup, exposeValue); // e.g. expose: tags, tags: post
+          // e.g. expose: tags, tags: post
+          groups.push(post, group, exposeValue);
         }
       } else {
-        pushToGroup(post, group, optsGroup); // don't expose anything
-      }
-    }
-
-    /**
-     * slots the post into the current group, with exposed values, dates, or as is
-     *
-     * @param {any} post the ready-available data related to the post
-     * @param {Object} group the current group
-     * @param {Object} optsGroup current group being acted upon
-     * @param {String|Array|Boolean} expose the exposed variable for the post
-     * @return {Array}
-     */
-    function pushToGroup (post, group, optsGroup, expose) {
-      group = group || {};
-      if (expose) {
-        group[expose] = group[expose] || {};
-        group[expose].files = group[expose].files || [];
-        group[expose].files.push(post);
-      } else {
-        if (typeof optsGroup.date_format !== 'undefined') {
-          let dateItems = optsGroup.date_format;
-          dateItems = dateItems.split('/');
-          for (let i = 1; i <= dateItems.length; i++) {
-            let format = dateItems.slice(0, i).join('/');
-            let dategroup = moment(post.date).format(format);
-            group.dates = group.dates || {};
-            group.dates[dategroup] = group.dates[dategroup] || {};
-            group.dates[dategroup].files = group.dates[dategroup].files || [];
-            group.dates[dategroup].files.push(post);
-          }
-        }
-        group.files = group.files || [];
-        group.files.push(post);
+        // don't expose anything
+        groups.push(post, group);
       }
     }
 
