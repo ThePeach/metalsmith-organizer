@@ -154,45 +154,46 @@ function plugin (opts) {
       }
       // FIXME this should be refactored in smaller chunks, hard to digest all at once
       for (let minigroup in group) {
-        let pageFiles;
+        let groupFiles;
         // determines where exactly the files are
         if (typeof group[exposeValue] !== 'undefined') { // exposed value
-          pageFiles = group[exposeValue].files;
+          groupFiles = group[exposeValue].files;
         } else if (typeof group[minigroup] !== 'undefined' && minigroup !== 'files') { // dates
-          pageFiles = group[minigroup].files;
+          groupFiles = group[minigroup].files;
         } else { // normal pages
-          pageFiles = group.files;
+          groupFiles = group.files;
         }
         // push any exposed information to metalsmith._metadata and handle path for dates layout
         if (typeof expose !== 'undefined' && typeof exposeValue === 'undefined') { // exposed values
           metalsmith._metadata.site[expose] = metalsmith._metadata.site[expose] || {};
           let nicename = makeSafe(minigroup);
-          let count = pageFiles.length;
+          let count = groupFiles.length;
           metalsmith._metadata.site[expose][minigroup] = {nicename: nicename, count: count};
         } else if (typeof expose === 'undefined' && minigroup !== 'files') { // dates
           // metadata
           if (moment(minigroup, optsGroup.date_format, true).isValid()) {
             metalsmith._metadata.site.dates = metalsmith._metadata.site.dates || {};
             let dateItems = minigroup;
-            let count = pageFiles.length;
+            let count = groupFiles.length;
             dateItems = dateItems.split('/');
-            utils.assignPath(metalsmith._metadata.site.dates, dateItems, {date: minigroup, count: count, files: pageFiles});
+            utils.assignPath(metalsmith._metadata.site.dates, dateItems, {date: minigroup, count: count, files: groupFiles});
           }
           // layout
           const dateLayout = optsGroup.date_page_layout.split('/');
           const currentLayout = minigroup.split('/').length - 1;
           layout = dateLayout[currentLayout];
         }
+        // PAGINATION
         // now that we have our files and variables split files into pages
         let pages = [];
-        let perPage = optsGroup.per_page || pageFiles.length; // don't use infinity
-        let totalPages = Math.ceil(pageFiles.length / perPage);
+        let perPage = optsGroup.per_page || groupFiles.length; // don't use infinity
+        let totalPages = Math.ceil(groupFiles.length / perPage);
         if (totalPages === 0) {
           totalPages = 1;
         }
+        // FIXME body should be split, hoping for better readability
         for (let i = 0; i < totalPages; i++) {
-          // FIXME body should be split, hoping for better readability
-          let thisPageFiles = pageFiles.slice(i * perPage, (i + 1) * perPage);
+          let thisPageFiles = groupFiles.slice(i * perPage, (i + 1) * perPage);
           // get variables for path
           if (i !== 0) {
             pathReplace.num = i + 1;
@@ -235,7 +236,8 @@ function plugin (opts) {
           if (typeof optsGroup.page_only !== 'undefined' &&
             optsGroup.page_only === true &&
             typeof optsGroup.no_folder !== 'undefined' &&
-            optsGroup.no_folder === true) {
+            optsGroup.no_folder === true
+          ) {
             filename = '';
             path = path.slice(0, path.length - 1);
           } else {
@@ -278,11 +280,12 @@ function plugin (opts) {
           }
           // add total number of pages when on last page
           if (page.pagination.num === page.pagination.total) {
-            for (let x = 2; x < page.pagination.total + 1; x++) { // don't get last page by starting at 2, but get page 0 by adding 1
+            // don't get last page by starting at 2, but get page 0 by adding 1
+            for (let x = 2; x < page.pagination.total + 1; x++) {
               let thispage = page.pagination.total - x;
-              pages[thispage].pagination.totalPages_permalink = page.permalink;
+              pages[thispage].pagination.total_pages_permalink = page.permalink;
             }
-            page.pagination.totalPages_permalink = page.permalink;
+            page.pagination.total_pages_permalink = page.permalink;
           }
           returnPage(page, files, pages);
         }
