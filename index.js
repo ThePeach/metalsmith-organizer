@@ -3,6 +3,7 @@ const utils = require('lib/utils');
 const posts = require('lib/posts');
 const groups = require('lib/groups');
 const optsUtils = require('lib/options');
+const pagination = require('lib/pagination');
 
 module.exports = plugin;
 
@@ -137,7 +138,7 @@ function plugin (opts) {
 
       const expose = optsGroup.expose;
       const exposeValue = optsGroup[expose];
-      const pathReplace = {group: optsGroup.group_name};
+
       const extension = typeof optsGroup.change_extension !== 'undefined' ? optsGroup.change_extension : '.html';
       let layout = optsGroup.page_layout || 'index';
 
@@ -194,52 +195,14 @@ function plugin (opts) {
         // FIXME body should be split, hoping for better readability
         for (let i = 0; i < totalPages; i++) {
           let thisPageFiles = groupFiles.slice(i * perPage, (i + 1) * perPage);
-          // get variables for path
-          if (i !== 0) {
-            pathReplace.num = i + 1;
-          } else {
-            delete pathReplace.num;
-          }
-          if (typeof optsGroup.date_format !== 'undefined') {
-            pathReplace.date = minigroup;
-          }
-          if (expose || exposeValue) {
-            pathReplace.expose = exposeValue || minigroup;
-            pathReplace.expose = makeSafe(pathReplace.expose);
-          }
-          // create path by replacing variables
-          let path = optsGroup.path
-            .replace(/{title}/g, '')
-            .replace(/{(.*?)}/g, function (matchPost, matchedGroup) {
-              if (typeof pathReplace[matchedGroup] === 'undefined') {
-                return '';
-              } else {
-                if (matchedGroup === 'num' && typeof optsGroup.num_format !== 'undefined') {
-                  return optsGroup.num_format
-                    .replace(/{(.*?)}/g, function (matchPost, matchedGroup) {
-                      return pathReplace[matchedGroup];
-                    });
-                }
-                return pathReplace[matchedGroup];
-              }
-            })
-            .replace(/(\/)+/g, '/')
-            .replace(/.$/m, match => {
-              if (match !== '/') {
-                return match + '/';
-              } else {
-                return match;
-              }
-            });
+          let path = pagination.createPath(groupName, opts, i, minigroup, makeSafe);
           // allows user to change filename
           let filename;
-          if (typeof optsGroup.page_only !== 'undefined' &&
-            optsGroup.page_only === true &&
-            typeof optsGroup.no_folder !== 'undefined' &&
-            optsGroup.no_folder === true
+          if (typeof optsGroup.page_only !== 'undefined' && optsGroup.page_only === true &&
+            typeof optsGroup.no_folder !== 'undefined' && optsGroup.no_folder === true
           ) {
             filename = '';
-            path = path.slice(0, path.length - 1);
+            path = path.slice(0, path.length - 1); // FIXME this should remove the last slash!!!
           } else {
             filename = 'index';
           }
