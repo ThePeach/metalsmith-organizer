@@ -153,6 +153,7 @@ function plugin (opts) {
       if (typeof group.dates !== 'undefined') {
         group = group.dates;
       }
+
       // FIXME this should be refactored in smaller chunks, hard to digest all at once
       for (let minigroup in group) {
         let groupFiles;
@@ -207,40 +208,25 @@ function plugin (opts) {
             filename = 'index';
           }
           // create our page object
-          let page = {
-            layout: layout,
-            group: groupName,
-            contents: new Buffer(''),
-            pagination: {
-              index: pages.length,
-              num: pages.length + 1,
-              pages: pages,
-              files: thisPageFiles,
-              total: totalPages
-            },
-            path: path + filename + extension,
-            permalink: '/' + path
-          };
+          const paginate = new pagination.Pagination(pages, thisPageFiles, totalPages);
+          const page = new pagination.Page(layout, groupName, paginate, path, filename, extension, optsGroup.page_description);
+
           // add exposed and exposed_value to pages that have it
+          // TODO rework following block logic
           if (typeof exposeValue !== 'undefined') { // special pages //e.g. expose: tags, tags: post
-            page.exposed = expose;
-            page.exposed_value = exposeValue;
+            page.setExposed(expose, exposeValue);
           } else if (typeof expose !== 'undefined') { // pages which expose all
-            page.exposed = expose;
-            page.exposed_value = minigroup;
+            page.setExposed(expose, minigroup);
           } else if (minigroup !== 'files') { // dates
-            page.exposed = 'dates';
-            page.exposed_value = minigroup;
+            page.setExposed('dates', minigroup);
           }
-          // adds a page description if it exists
-          if (typeof optsGroup.page_description !== 'undefined') {
-            page.page_description = optsGroup.page_description;
-          }
+
           // append previous page to pagination
           if (totalPages !== 1 && i !== 0) {
             page.pagination.prev = pages[i - 1];
             pages[i - 1].pagination.next = page;
           }
+
           // add total number of pages when on last page
           if (page.pagination.num === page.pagination.total) {
             // don't get last page by starting at 2, but get page 0 by adding 1
@@ -250,6 +236,7 @@ function plugin (opts) {
             }
             page.pagination.total_pages_permalink = page.permalink;
           }
+
           returnPage(page, files, pages);
         }
       }
