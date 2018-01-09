@@ -6,42 +6,46 @@ It's meant as an all-in-one replacement for plugins such as metalsmith-tags, met
 
 The plugin has been tested with options similar to those shown in the [example](#example) section. If you have a specific use case in mind that isn't covered and isn't outputting what you expect, open an issue and I'll see what I can do.
 
-
 ## Install
 
-```
-npm install metalsmith-organizer
-```
+    npm install metalsmith-organizer
 
 ## Usage
 
 ```javascript
 const metalsmith = require("metalsmith");
 const organizer = require("metalsmith-organizer")
+
 metalsmith
-    //should be used after any post processing (markdown, shorcodes, etc), but before metalsmith-layouts
+    // should be used after any post processing (markdown, shortcodes, etc), but before metalsmith-layouts
     .use(organizer({
-        //global options
+        // [global options]
         groups: [
             group: {
-                //group options
+                // [group options]
             }
         ]
     }))
 ```
 
-## Global Options
+## Global options
 
 ### `permalink_group`
 
 The group that will contain the path to the actual posts. Other groups will only create pages and won't be given the proper post data for templates unless that group's `override_permalink_group` is set to `true`.
 
 ### `drafts`
-(default false)
 
-True will include posts marked as drafts (by either a `draft`, `published` or `status` property).
+(default `false`)
+
+If set to `true`, it will include posts marked as drafts by either one of the following:
+
+- `draft: true`
+- `published: false`
+- `status: draft`
 
 ### `make_safe`
+
 (function)
 
 If slug is defined, this plugin will use that as the title, otherwise it uses a built in function below to make the title url safe. You can override this by specifying your own function.
@@ -54,23 +58,27 @@ make_safe: function (string) {
 ```
 
 ### `groups`
+
 (array of objects)
 
-An array containing all the groups with each group being it's own object. If a later group conflicts with an earlier group, it will overwrite it, so order matters.
+An array containing all the groups with each group being it's own object. If a later group conflicts with an earlier group, it will overwrite it, so _order matters_.
 
 ## Group Options
 
-### Search Criteria
+### Grouping criteria
 
-Any property that is not an option (`add_prop`, `change_extension`, `date_format`, `date_page_layout`, `expose`, `group_name`, `no_folder`, `num_format`, `override_permalink_group`, `page_description`, `page_layout`, `page_only`, `path`, `per_page`, `reverse`, `search_type`) can be used as the search criteria to match posts to the group. There can be as many properties as you like but it cannot match multiple of the same property (e.g `tags: "tag1, tag2"` or by repeating them `tags: "tag1", tags: "tag2`).
+Any property that is not an option (`add_prop`, `change_extension`, `date_format`, `date_page_layout`, `expose`, `group_name`, `no_folder`, `num_format`, `override_permalink_group`, `page_description`, `page_layout`, `page_only`, `path`, `per_page`, `reverse`, `search_type`) can be used to add posts to the group. E.g. `type: "post"` will include only the posts that have that property/value couple.
 
-Both the search criteria and the properties being searched are made safe with the `make_safe` function.
+There can be as many properties as you like but it cannot match multiple of the same property (e.g `tags: "tag1, tag2"` or by repeating them `tags: "tag1", tags: "tag2`).
+
+**TO EXPAND** Both the search criteria and the properties being searched are made safe with the `make_safe` function.
 
 You can also now check whether a property exists with a boolean (e.g `thumbnail: true`). This will exclude any posts without that property. Or inversely you can set it to false, and any posts that have that property are excluded.
 
 If you don't specify any search criteria, all posts will be included in the group.
 
 ### `search_type`
+
 ("any" or "all")
 
 Posts by default must match `all` search criteria. Setting this to `any` means a post must only match one to be included in that group.
@@ -81,7 +89,7 @@ Can also be set globally, with groups overriding it if set.
 
 The path to the page or post. The following variables are allowed: `{group}, {title}, {num}, {expose}`.
 
-The path should not start or end with forward slashes, it is assumed all paths are relative to root. No extensions should be appended at the end.
+The path should not start or end with forward slashes, it is assumed all paths are relative to the root of the project. No extensions should be appended at the end.
 
 In permalink groups `{num}` is ignored when creating the actual post, but not for it's pages, allowing you to set the path for say, the archive and posts all in one go (e.g `2017/page/1` and `2017/post`).
 
@@ -126,9 +134,11 @@ Using `{date}` also adds a dates property to the site metadata which gives you a
     },
 }
 ```
+
 It can nest itself as deeply as needed.
 
 ### `reverse`
+
 (default false)
 
 Reverse sorting order of groups with a date_format.
@@ -144,8 +154,8 @@ date_format: "YYYY/MM",
 date_page_layout: "template-year.ext/template-month.ext",
 ```
 
-
 ### `page_layout`
+
 (default "index")
 
 The layout to use for pages. Even if this is a permalink group, this only applies to it's pages. For example:
@@ -154,6 +164,7 @@ The layout to use for pages. Even if this is a permalink group, this only applie
 page_layout: "index.ext",
 path: "{group}/{title}",
 ```
+
 Here the layout would only apply to the group page. The actual post is left alone to be handled by the options set in metalsmith-layouts.
 
 ### `expose`
@@ -183,7 +194,8 @@ Expose also adds the property specified (e.g. `"tags"`) as a property of the sit
 In pages you can also access an `exposed` property, which will tell you what was exposed (e.g. `"tags"`) and an `exposed_value` (e.g. `"tag"`).
 
 ### `override_permalink_group`
-(default false)
+
+(default `false`)
 
 Allows the group to **also** be a permalink group, otherwise only the "page" data is exposed to the template.
 
@@ -192,23 +204,29 @@ This is useful for pages. E.g. the `permalink_group` could be `posts` and the pa
 Same path rules apply.
 
 ### `no_folder`
-(default false)
 
-`path: {title}` would normally produce `title/index.html`. If this is set to true, it will produce `title.html` directly without the folder.
+(default `false`)
+
+`path: {title}` would normally produce `title/index.html`.
+
+If this is set to `true`, it will produce `title.html` directly without the folder.
 
 Useful for creating a 404 page, otherwise you would always get `404/index.html`.
 
 ### `add_prop`
+
 (array of objects [{property: value}])
 
 Adds the property to any file/post that passed through the group, for use internally with other metalsmith plugins. For example, I want a group to determine which posts will be found by a search plugin so I can do `add_prop: [{search: true}]`. Note the property is not exclusive to the group as it is a property of the post itself.
 
 ### `change_extension`
+
 (default ".html")
 
 For if you need to generate other filetypes such as xml for feeds and sitemaps.
 
 ### `page_only`
+
 (default false)
 
 For when you want just the final page/pages. For example, for generating feeds, you'd want just a list of all the posts available.
@@ -216,6 +234,7 @@ For when you want just the final page/pages. For example, for generating feeds, 
 Careful not to set `override_permalink_group` to true with this. We don't want the individual files actually created.
 
 ### `page_description`
+
 (string)
 
 If you want to add a description to the pages created from that group. Format is up to you as this will be handled by your layouts.
@@ -224,76 +243,84 @@ If you want to add a description to the pages created from that group. Format is
 
 ```javascript
 .use(organizer({
-    permalink_group: "posts",
-    drafts: false,
-    groups: [
-        {   group_name: "posts",
-            type: "post", //get all posts, exclude pages
-            path: "{date}/{num}/{title}", //creates paginated archives and permalinks
-            date_format: "YYYY/MM", //posts look like: /2017/01/post/index.html
-            date_page_layout: "index-year.ext/index-month.ext", //use one template for the year and another for the months,
-            num_format: "page/{num}", //archives look like /2017/01/page/2/index.html
-            per_page: 10,
-            add_prop: [{search: true}] //for use with a plugin later
-        },
-        {   group_name: "index",//for the home page
-            type: "post",//get all posts, exclude pages
-            page_layout: "index.ext",//use index template
-            path: "{num}",
-            num_format: "page/{num}", //home pages will look like: /page/2/index.html,  /page/3/index.html, and so on.
-            per_page:10,
-        },
-        {   group_name: "tag"
-            type: "post",//get all posts, exclude pages
-            expose: "tags", //expose the tags property
-            path: "tags/{expose}/{num}", //this will create tag pages that look like so: tags/tag/index.html, tags/tag2index.html, and so on
-            num_format: "page/{num}", //this will paginate each tag page like so: tags/tag/page/2/index.html, tags/tag2/page/2/index.html, and so on.
-            per_page:10,
-        },
-        {   group_name: "pages",
-            type: "page", //get pages, exclude posts
-            path: "{title}", //this will create "post" pages that look like: about/index.html, contact/index.html, etc.
-            override_permalink_group: true, //so that we actually get the page data in our template
-        },
-        {   group_name: "error",
-            title: "404", //get 404 "post"
-            path: "{title}",
-            override_permalink_group: true, //again we need to pass the right data to the template
-            no_folder: true //path would normally create a file at 404/index.html but the no folder forces it to output 404.html
-        },
-        {   group_name: "portfolio",
-            type: "post", //get all posts...
-            tags: "thumb",//...that also have a thumb
-            thumb_url: true, //check that a thumb url property exists
-            path: "{group}", //make the path the group name so we get portfolio/index.html
-            //no per_page means it we don't need to specify anything about page numbers, it's just a single page
-            page_layout: "index-masonry-thumb.ext", //use a different template
-        },
-        {   group_name: "rss",
-            type: "post", //get all posts like the post group
-            path: "{group}", //url will be at rss/index.xml
-            change_extension: ".xml", //change our extension
-            page_layout: "rss", //use our rss template
-            page_only: true // only the "pages" so that we get a list of all our post files
-        },
-        {   group_name: "tag_rss",//then say we wanted an rss feed for every tag
-            type: "post", //we use the same search criteria as the tags group
-            expose: "tags", //also the same expose so that it's broken into the correct groups of pages
-            path: "tag/{expose}/rss",
-            //the path is a little different because we can't just use {group} and also I want it to be in an rss subfolder to link to so we manually specify it so we'll get files output at tags/tag/rss/index.xml, tags/tag2/rss/index.xml
-            page_only: true, // we don't want all the individual files created
-            change_extension: ".xml" //change our extension
-            page_layout: "rss.ext", //change our template to the rss template
-        },
-        {   group_name: "sitemap", //similarly to how we made an rss feed we can make a sitemap
-            //the cool thing about making it this way is you have access to the post so you can do stuff in your templates (if the logic of the language allows it, I use ejs which is just javascript really and lets me do anything I want) like check if the content has videos, etc, then output that information to the sitemap for better SEO
-            page_layout: "sitemap.ext", //change to my sitemap template
-            path: "{group}",
-            no_folder: true, //so we get sitemap.xml at the root
-            change_extension: ".xml", //change out extension
-            page_only: true, //because again we don't actually need to create any individual files
-        },
-    ]
+  permalink_group: "posts",
+  drafts: false,
+  groups: [
+    {
+      group_name: "posts",
+      type: "post", // grouping criteria
+      path: "{date}/{num}/{title}", // e.g. /2017/01/post-title/index.html
+      date_format: "YYYY/MM", // needed since use of {num} in path
+      date_page_layout: "index-year.ext/index-month.ext", // use one template for the year and another for the months,
+      num_format: "page/{num}", // archives look like /2017/01/page/2/index.html or /2016/page/1/index.html
+      per_page: 10,
+      add_prop: [{search: true}] // for use with a plugin later
+    },
+    {
+      group_name: "index", // for the home page
+      type: "post",
+      page_layout: "index.ext", // use index template
+      num_format: "page/{num}", // pages will look like: /page/2/index.html
+      per_page: 10,
+    },
+    {
+      group_name: "tag"
+      type: "post",
+      expose: "tags", // expose the tags property
+      path: "tags/{expose}/{num}", // this will create tag pages that look like so: tags/tag1/index.html, tags/tag2/index.html, and so on
+      num_format: "page/{num}", //this will paginate each tag page like so: tags/tag/page/2/index.html, tags/tag2/page/2/index.html, and so on.
+      per_page:10,
+    },
+    {
+      group_name: "pages",
+      type: "page", // all pages with type: "post" will be exclude
+      path: "{title}", // pages URLs will be: about/index.html, contact/index.html, etc.
+      override_permalink_group: true, // so that we actually get the page data in our template
+    },
+    {
+      group_name: "error",
+      title: "404", // grouping criteria: get the 404 "post"
+      path: "{title}",
+      override_permalink_group: true, //again we need to pass the right data to the template
+      no_folder: true // force to output 404.html
+    },
+    {
+      group_name: "portfolio",
+      type: "post",
+      tags: "thumb", // second grouping criteria
+      thumb_url: true, // third grouping criteria
+      path: "{group}", // make the path the group name so we get portfolio/index.html
+      // no per_page means no pagination, one single page
+      page_layout: "index-masonry-thumb.ext", // use a different template
+    },
+    {
+      group_name: "rss",
+      type: "post",
+      path: "{group}", // url will be at rss/index.xml
+      change_extension: ".xml", // change our extension
+      page_layout: "rss", // use our rss template
+      page_only: true // only the "pages" so that we get a list of all our post files
+    },
+    {
+      group_name: "tag_rss",//then say we wanted an rss feed for every tag
+      type: "post", //we use the same search criteria as the tags group
+      expose: "tags", //also the same expose so that it's broken into the correct groups of pages
+      path: "tag/{expose}/rss",
+      //the path is a little different because we can't just use {group} and also I want it to be in an rss subfolder to link to so we manually specify it so we'll get files output at tags/tag/rss/index.xml, tags/tag2/rss/index.xml
+      page_only: true, // we don't want all the individual files created
+      change_extension: ".xml" //change our extension
+      page_layout: "rss.ext", //change our template to the rss template
+    },
+    {
+      group_name: "sitemap", //similarly to how we made an rss feed we can make a sitemap
+      //the cool thing about making it this way is you have access to the post so you can do stuff in your templates (if the logic of the language allows it, I use ejs which is just javascript really and lets me do anything I want) like check if the content has videos, etc, then output that information to the sitemap for better SEO
+      page_layout: "sitemap.ext", //change to my sitemap template
+      path: "{group}",
+      no_folder: true, //so we get sitemap.xml at the root
+      change_extension: ".xml", //change out extension
+      page_only: true, //because again we don't actually need to create any individual files
+    },
+  ]
 ```
 
 I hope that clarifies how you use all the options.
@@ -310,8 +337,8 @@ The following variables will be available if they exist.
 - `permalink` (e.g `/post`)
 - `group`
 - `pagination` (different than the pages pagination)
-    - `next` (object with single post)
-    - `prev` (object with single post)
+  - `next` (object with single post)
+  - `prev` (object with single post)
 
 ### Index Templates
 
@@ -324,14 +351,14 @@ The following variables will be available if they exist.
 - `exposed_value`
 - `contents` (empty)
 - `pagination` (different than the posts pagination)
-    - `index` (zero based)
-    - `num` (index + 1)
-    - `total` (num based)
-    - `total_pages_permalink` (num based e.g. `archive/5`)
-    - `pages` (object containing other pages)
-    - `files` (object containing all files for page)
-    - `next` (next page object)
-    - `prev` (prev page object)
+  - `index` (zero based)
+  - `num` (index + 1)
+  - `total` (num based)
+  - `total_pages_permalink` (num based e.g. `archive/5`)
+  - `pages` (object containing other pages)
+  - `files` (object containing all files for page)
+  - `next` (next page object)
+  - `prev` (prev page object)
 
 ### Global
 
